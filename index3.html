@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SOP Generation Tool</title>
+    
+</head>
+<body>
+    <h1>SOP Generation Tool</h1>
+    <form id="sopForm">
+        <!-- Add input fields for user information -->
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <!-- Add more input fields for other information -->
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required><br><br>
+
+        <button type="submit">Generate SOP</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById("sopForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            // Collect user inputs
+            const name = document.getElementById("name").value;
+            const email = document.getElementById("email").value;
+
+            // Send data to the back-end
+            fetch("/generateSOP", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ name, email }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Check if the response contains a generated SOP
+                if (data.sop) {
+                    // Display the generated SOP on the front-end
+                    document.getElementById("result").innerHTML = `
+                        <h2>Generated SOP:</h2>
+                        <p>${data.sop}</p>
+                    `;
+                } else {
+                    document.getElementById("result").innerHTML = "No SOP generated.";
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        });
+    </script>
+    <script>
+        const express = require("express");
+const bodyParser = require("body-parser");
+const nodemailer = require("nodemailer");
+const { OpenAIApi } = require("openai");
+const app = express();
+
+// Middleware to parse JSON
+app.use(bodyParser.json());
+
+// Configure nodemailer with your SMTP server details
+const transporter = nodemailer.createTransport({
+    host: 'your-smtp-server.com',
+    port: 587, // Your SMTP port (typically 587 for TLS or 465 for SSL)
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: 'poojasavant@gmail.com', // Your email address
+        pass: 'savant@67', // Your email password
+    },
+});
+
+// Initialize the OpenAI API client
+const openai = new OpenAIApi({ key: 'your-openai-api-key' });
+
+// Handle form submission
+app.post("/generateSOP", async (req, res) => {
+    // Retrieve user data from the request body
+    const { name, email } = req.body;
+
+    try {
+        // Generate a customized SOP using the OpenAI GPT model
+        const sopText = await generateSOP(name, email);
+
+        // Send the SOP to the user's email
+        await sendEmail(email, sopText);
+
+        // Respond with a success message and the generated SOP
+        res.json({ message: "SOP has been generated and sent to your email.", sop: sopText });
+    } catch (error) {
+        // Handle errors
+        console.error("Error:", error);
+        res.status(500).json({ message: "Error generating or sending the SOP.", sop: null });
+    }
+});
+
+// Start the server
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
+
+// Implement the generateSOP function using the OpenAI GPT model
+async function generateSOP(name, email) {
+    try {
+        // Generate a customized SOP using the GPT model
+        const response = await openai.createCompletion({
+            prompt: `Write a Statement of Purpose (SOP) for ${name} who is applying for a program at our institution. Include details about their qualifications, goals, and aspirations.`,
+            max_tokens: 200, // You can adjust the length as needed
+        });
+
+        // Extract the generated text from the API response
+        const sopText = response.choices[0].text;
+
+        return sopText;
+    } catch (error) {
+        throw error;
+    }
+}
+
+// Implement the sendEmail function using nodemailer
+function sendEmail(toEmail, sopText) {
+    return new Promise((resolve, reject) => {
+        const mailOptions = {
+            from: 'poojasavant@gmail.com', // Your email address
+            to: toEmail, // Recipient's email address
+            subject: 'Statement of Purpose', // Email subject
+            text: sopText, // SOP text
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error("Error sending email:", error);
+                reject(error);
+            } else {
+                console.log("Email sent:", info.response);
+                resolve();
+            }
+        });
+    });
+}
+
+    </script>
+</body>
+</html>
